@@ -3,6 +3,8 @@ package com.example.lsx.trainingmulitiplethread;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.Message;
 import android.os.Process;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -37,26 +39,50 @@ public class MainActivity extends AppCompatActivity {
         mLoadimagebutton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                new LoadImageTask().execute();
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Message msg1 = mHandler.obtainMessage();
+                        msg1.what = 0;
+                        mHandler.sendMessage(msg1);
+                        for (int i = 0; i < 11; i++) {
+                            sleep();
+                            Message msg2 = mHandler.obtainMessage();
+                            msg2.what = 1;
+                            msg2.obj = i * 10;
+                            mHandler.sendMessage(msg2);
+                        }
+                        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher);
+                        Message msg3 = mHandler.obtainMessage();
+                        msg3.what = 2;
+                        msg3.obj = bitmap;
+                        mHandler.sendMessage(msg3);
+                    }
+                }).start();
             }
         });
     }
 
-    private void showimage() {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                final Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher);
-                sleep();
-                mImageview.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        mImageview.setImageBitmap(bitmap);
-                    }
-                });
+    private Handler mHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            switch (msg.what) {
+                case 0:
+                    mProgressbar.setVisibility(View.VISIBLE);
+                    break;
+                case 1:
+                    mProgressbar.setProgress((Integer) msg.obj);
+                    /*if ((Integer) msg.obj == 100) {
+                        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher);
+                        mImageview.setImageBitmap(bitmap);*/
+                    break;
+                case 2:
+                    mImageview.setImageBitmap((Bitmap) msg.obj);
+                    mProgressbar.setVisibility(View.INVISIBLE);
             }
-        }).start();
-    }
+        }
+    };
 
     private void sleep() {
         try {
@@ -65,38 +91,6 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
-
-    class LoadImageTask extends AsyncTask<Void, Integer, Bitmap> {
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            mProgressbar.setVisibility(View.VISIBLE);
-        }
-
-        @Override
-        protected Bitmap doInBackground(Void... voids) {
-            for (int i = 0; i <11 ; i++) {
-                sleep();
-                publishProgress(i*10);
-            }
-            Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher);
-            Log.d(TAG, "Thread: "+Thread.currentThread().getName());
-            return bitmap;
-        }
-
-        @Override
-        protected void onPostExecute(Bitmap bitmap) {
-            super.onPostExecute(bitmap);
-            mImageview.setImageBitmap(bitmap);
-            Log.d(TAG, "Thread: "+Thread.currentThread().getName());
-            mProgressbar.setVisibility(View.INVISIBLE);
-        }
-
-        @Override
-        protected void onProgressUpdate(Integer... values) {
-            super.onProgressUpdate(values);
-            mProgressbar.setProgress(values[0]);
-        }
-    }
 }
+
+
